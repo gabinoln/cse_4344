@@ -5,31 +5,52 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 
 /**
- * Created by Gabino Luna on 3/6/2017.
+ * ClientResponse class is used to handle the client request. Status codes and responses will be generated accordingly
  */
 public class ClientResponse {
 
-
-    public void processInput(String method, String query, OutputStream outputStreamToClient, String contentExpexted) {
-        if (!method.equals("GET")) {
+    /*
+     * processInput(String method, String query, OutputStream outputStreamToClient, String contentExpexted)
+     * inputs: String method - specifies HTTP method used, String query - specifies file/path requested
+     * OutputStream outputStreamToClient - the output stream to the client socket,
+     * String contentExpexted - what kind of response the client is expecting
+     *
+     * outputs: none
+     *
+     * purpose: handle input and start sending appropriate response based on the status code
+     */
+    public void processInput(String method, String query, OutputStream outputStreamToClient, String contentExpected) {
+        if (!method.equals("GET")) { // case if the method isn't GET
             sendResponse(405, outputStreamToClient, null, "");
             System.out.println("Invalid/unsupported HTTP method");
-        } else if (!(query.charAt(0) == '/')) {
+        } else if (!(query.charAt(0) == '/')) { // Case if not a valid path
             sendResponse(404, outputStreamToClient, null, "");
             System.out.println("Not a valid path requested");
         }
 
-        String fileName = query.replaceFirst("/", "");
+        String fileName = query.replaceFirst("/", ""); // replacing the first character of the query string to get fname
         File file = new File(fileName);
-        if (file.isFile()) {
+        if (file.isFile()) { // if the file is found in specified path
             System.out.println("FILE FOUND");
-            sendResponse(200, outputStreamToClient, file, contentExpexted);
-        } else {
+            sendResponse(200, outputStreamToClient, file, contentExpected);
+        } else { // else not found
             System.out.println("FILE NOT FOUND");
             sendResponse(404, outputStreamToClient, null, "");
         }
     }
 
+    /*
+     * prosendResponse(int status, OutputStream outputStreamToClient, File file, String contentExpected)
+     * inputs: int status - specifies the status of the request,
+     * OutputStream outputStreamToClient - the output stream to the client socket,
+     * File file - the file to be sent to the client,
+     * String contentExpected - the content0type to be sent
+     *
+     * outputs: none
+     *
+     * purpose: send the response to the client with the appropriate response header and body
+     * at the end of transmission the output stream is closed
+     */
     public void sendResponse(int status, OutputStream outputStreamToClient, File file, String contentExpected) {
         String statusString = "";
         String response = "";
@@ -39,14 +60,13 @@ public class ClientResponse {
         String myServer = "Server: Gabino HTTPServer";
 
 
-        switch (status) {
+        switch (status) { // switch depending on the status code of the request
             case 200:
                 statusString = "HTTP/1.1 200 OK\r\n";
                 if (contentExpected.contains("text/html")) {
                     contentType = "Content-Type: text/html\r\n";
-                    System.out.println("SENDING TEXT");
+
                     try {
-                        System.out.println(file.getName());
                         FileInputStream fileIn = new FileInputStream(file);
                         int content;
                         while ((content = fileIn.read()) != -1) {
@@ -67,10 +87,8 @@ public class ClientResponse {
                     }
                 } else if (contentExpected.contains("image")) {
                     contentType = "Content-Type: image/webp\r\n";
-                    System.out.println("SENDING IMAGE");
 
                     try {
-                        System.out.println(file.getName());
                         BufferedImage image = ImageIO.read(file);
                         ByteArrayOutputStream imageByteArrOut = new ByteArrayOutputStream();
                         ImageIO.write(image, "jpg", imageByteArrOut);
@@ -130,7 +148,6 @@ public class ClientResponse {
                         "<h>ERROR 404 FILE NOT FOUND</h>" +
                         "</body>" +
                         "</html>";
-                System.out.println(response);
 
                 try {
                     contentLength = contentType + response.length() + "\r\n";
